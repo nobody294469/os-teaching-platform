@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 import psutil
 import time
+import re
 
 # ═════════════════════════════════════════════════════════════════════════════
 # PAGE CONFIG & THEME
@@ -28,16 +29,43 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-ACCENT     = "#4F8EF7"
-ACCENT2    = "#F7844F"
-BG_CARD    = "#1E2330"
-BG_DARK    = "#141824"
-TEXT_LIGHT = "#E8EAF0"
-SUCCESS    = "#4CAF50"
-WARNING    = "#FFC107"
-DANGER     = "#F44336"
-PURPLE     = "#9C27B0"
-TEAL       = "#00BCD4"
+is_light_mode = st.sidebar.toggle("☀️ Light Mode", value=False, key="theme_toggle")
+
+if is_light_mode:
+    ACCENT     = "#4F8EF7"
+    ACCENT2    = "#F7844F"
+    BG_CARD    = "#FFFFFF"
+    BG_DARK    = "#F8FAFC"
+    TEXT_LIGHT = "#0F172A"
+    SUCCESS    = "#10B981"
+    WARNING    = "#F59E0B"
+    DANGER     = "#EF4444"
+    PURPLE     = "#D946EF"
+    TEAL       = "#14B8A6"
+    
+    # CSS specific colors
+    SIDEBAR_GRAD_1 = "#e2e8f0"
+    SIDEBAR_GRAD_2 = "#f1f5f9"
+    BORDER_COLOR   = "#cbd5e1"
+    INPUT_BG       = "#ffffff"
+    PLOT_EDGE      = "#ffffff"
+else:
+    ACCENT     = "#4F8EF7"
+    ACCENT2    = "#F7844F"
+    BG_CARD    = "#1E2330"
+    BG_DARK    = "#141824"
+    TEXT_LIGHT = "#E8EAF0"
+    SUCCESS    = "#4CAF50"
+    WARNING    = "#FFC107"
+    DANGER     = "#F44336"
+    PURPLE     = "#9C27B0"
+    TEAL       = "#00BCD4"
+    
+    SIDEBAR_GRAD_1 = "#1a1f2e"
+    SIDEBAR_GRAD_2 = "#0f1319"
+    BORDER_COLOR   = "#2a3044"
+    INPUT_BG       = "#1a1f2e"
+    PLOT_EDGE      = "#0f1319"
 
 st.markdown(f"""
 <style>
@@ -51,8 +79,8 @@ st.markdown(f"""
 
   /* Sidebar */
   section[data-testid="stSidebar"] {{
-      background: linear-gradient(180deg, #1a1f2e 0%, #0f1319 100%);
-      border-right: 1px solid #2a3044;
+      background: linear-gradient(180deg, {SIDEBAR_GRAD_1} 0%, {SIDEBAR_GRAD_2} 100%);
+      border-right: 1px solid {BORDER_COLOR};
   }}
   section[data-testid="stSidebar"] .stRadio label {{
       font-size: 13px; color: {TEXT_LIGHT};
@@ -60,9 +88,9 @@ st.markdown(f"""
 
   /* Cards */
   .os-card {{
-      background: {BG_CARD}; border: 1px solid #2a3044;
+      background: {BG_CARD}; border: 1px solid {BORDER_COLOR};
       border-radius: 12px; padding: 20px 24px;
-      margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);
   }}
   .os-card-accent  {{ border-left: 4px solid {ACCENT}; }}
   .os-card-warning {{ border-left: 4px solid {WARNING}; }}
@@ -120,22 +148,22 @@ st.markdown(f"""
   p, li, td, th {{ font-size: 1.08rem !important; line-height: 1.85 !important; }}
   .slide-title {{ font-size: 2rem !important; }}
   /* Streamlit overrides */
-  .stButton > button {{
+  div.stButton > button {{
       background: linear-gradient(135deg, {ACCENT} 0%, #3a6fd8 100%); color: white;
       border: none; border-radius: 8px; padding: 8px 20px;
       font-family: 'DM Sans', sans-serif; font-weight: 500; transition: opacity 0.2s;
   }}
-  .stButton > button:hover {{ opacity: 0.85; }}
-  .stSelectbox > div > div,
-  .stTextInput > div > div > input,
-  .stNumberInput > div > div > input {{
-      background: #1a1f2e !important; border: 1px solid #2a3044 !important;
+  div.stButton > button:hover {{ opacity: 0.85; }}
+  div.stSelectbox > div > div,
+  div.stTextInput > div > div > input,
+  div.stNumberInput > div > div > input {{
+      background: {INPUT_BG} !important; border: 1px solid {BORDER_COLOR} !important;
       color: {TEXT_LIGHT} !important; border-radius: 8px !important;
   }}
   div[data-testid="stExpander"] {{
-      background: {BG_CARD}; border: 1px solid #2a3044; border-radius: 10px;
+      background: {BG_CARD}; border: 1px solid {BORDER_COLOR}; border-radius: 10px;
   }}
-  hr {{ border-color: #2a3044; }}
+  hr {{ border-color: {BORDER_COLOR}; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -172,6 +200,8 @@ with st.sidebar:
         "🏠 Home",
         "📚 Learn Mode",
         "⚙️ CPU Scheduling",
+        "🏦 Banker's Algorithm",
+        "📦 Contiguous Memory",
         "🧠 Memory Management",
         "💿 Disk Scheduling",
         "📊 System Monitor",
@@ -189,6 +219,12 @@ with st.sidebar:
         st.caption("Jump to a simulator directly:")
         if st.button("⚙️ CPU Sim"):
             st.session_state.main_nav = "⚙️ CPU Scheduling"
+            st.rerun()
+        if st.button("🏦 Banker's Sim"):
+            st.session_state.main_nav = "🏦 Banker's Algorithm"
+            st.rerun()
+        if st.button("📦 Cont. Memory Sim"):
+            st.session_state.main_nav = "📦 Contiguous Memory"
             st.rerun()
         if st.button("🧠 Memory Sim"):
             st.session_state.main_nav = "🧠 Memory Management"
@@ -212,10 +248,13 @@ def section_header(icon, title, subtitle=""):
 def info_card(title, body, kind="accent"):
     color_map = {"accent": ACCENT, "warning": WARNING, "success": SUCCESS, "danger": DANGER, "purple": PURPLE, "teal": TEAL}
     color = color_map.get(kind, ACCENT)
+    body_html = body.replace("\n", "<br>")
+    body_html = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', body_html)
+    body_html = re.sub(r'\*(.*?)\*', r'<i>\1</i>', body_html)
     st.markdown(f"""
     <div class="os-card" style="border-left:4px solid {color}">
         <b style="color:{color}">{title}</b><br>
-        <span style="font-size:14px;color:#b0b8cc">{body}</span>
+        <div style="font-size:14px;color:#b0b8cc;margin-top:4px;">{body_html}</div>
     </div>""", unsafe_allow_html=True)
 
 def analogy(text):
@@ -246,7 +285,7 @@ def styled_fig(w=10, h=3.5):
     fig, ax = plt.subplots(figsize=(w, h))
     fig.patch.set_facecolor(BG_DARK)
     ax.set_facecolor(BG_CARD)
-    ax.spines[:].set_color("#2a3044")
+    ax.spines[:].set_color(BORDER_COLOR)
     ax.tick_params(colors=TEXT_LIGHT)
     return fig, ax
 
@@ -1071,6 +1110,35 @@ Modern OS use **execution-time binding** with paging for full flexibility.
   },
 
   # ──────────────────────────────────────────────────────────────────────────
+  # NEW ADDITION: I/O Management
+  # ──────────────────────────────────────────────────────────────────────────
+  { "topic": "🖨️ I/O Management & Secondary Storage",
+    "section": "Section 2 — Core Algorithms",
+    "slides": [
+      { "title": "I/O Devices & Buffering",
+        "content": """
+**I/O Management** handles how the OS interacts with external devices.
+
+**Types of I/O Devices:**
+- **Block Devices:** Store info in fixed-size blocks (e.g., Hard Drives, SSDs). Can read/write blocks independently.
+- **Character Devices:** Deliver/accept stream of characters (e.g., Keyboards, Mice, Network interfaces).
+
+**I/O Buffering:**
+A technique to manage the speed mismatch between the CPU/Memory and slow I/O devices.
+- **Single Buffer:** OS assigns a buffer in memory. User process waits for buffer to fill.
+- **Double Buffering:** Two buffers! While a process consumes buffer 1, the device fills buffer 2. Keeps both busy.
+- **Circular Buffering:** More than two buffers, organized as a ring.
+""",
+        "bullets": ["Spooling (Simultaneous Peripheral Operations On-Line) is used for printers", "Buffering smooths out data peaks and mismatch data transfer speeds"],
+        "analogy": "Buffering is like catching rain in a barrel to use later with a hose, rather than trying to use the variable raindrops directly as they fall.",
+        "formula": None,
+        "teacher_note": "Explain why video streaming needs a buffer. Without it, the video stutters every time network speed dips below playback speed.",
+        "mistakes": ["Confusing Buffering with Caching. Cache holds copies of data for faster re-access. Buffers hold data in transit."],
+        "simulator": None }
+    ]
+  },
+
+  # ──────────────────────────────────────────────────────────────────────────
   # SECTION 2-D  Disk Scheduling (Extended)
   # ──────────────────────────────────────────────────────────────────────────
   { "topic": "💿 Disk Scheduling — All Algorithms",
@@ -1403,7 +1471,7 @@ def draw_deadlock_rag():
     # Resources (squares)
     for name, pos in [("R1", (3.75, 4)), ("R2", (3.75, 2))]:
         rect = plt.Rectangle((pos[0]-0.55, pos[1]-0.4), 1.1, 0.8,
-                              color="#2a3044", ec="#4F8EF7", linewidth=2, zorder=3)
+                              color=BORDER_COLOR, ec="#4F8EF7", linewidth=2, zorder=3)
         ax.add_patch(rect)
         dot = plt.Circle(pos, 0.15, color="#4CAF50", zorder=4)
         ax.add_patch(dot)
@@ -1721,7 +1789,7 @@ def page_learn():
 
     with nav2:
         dots = "".join(
-            f'<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:{ACCENT if i == st.session_state.learn_slide else "#2a3044"};margin:0 4px"></span>'
+            f'<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:{ACCENT if i == st.session_state.learn_slide else BORDER_COLOR};margin:0 4px"></span>'
             for i in range(total)
         )
         st.markdown(f'<div style="text-align:center;margin-top:6px">{dots}</div>', unsafe_allow_html=True)
@@ -1827,6 +1895,109 @@ def round_robin(processes, quantum):
     wt = [max(0, finish[p[0]] - p[1] - p[2]) for p in processes]
     return gantt, wt
 
+def priority_scheduling(processes, priorities):
+    """Non-preemptive priority scheduling. Lower number = higher priority."""
+    remaining = list(processes)
+    timeline, current_time, waiting_times = [], 0, {}
+    while remaining:
+        available = [p for p in remaining if p[1] <= current_time]
+        if not available:
+            current_time = min(p[1] for p in remaining)
+            available = [p for p in remaining if p[1] <= current_time]
+        chosen = min(available, key=lambda x: (priorities.get(x[0], 0), x[1]))
+        pid, at, bt = chosen
+        timeline.append((pid, current_time, current_time + bt))
+        waiting_times[pid] = current_time - at
+        current_time += bt
+        remaining.remove(chosen)
+    return timeline, [waiting_times[p[0]] for p in processes]
+
+def srtf(processes):
+    """Shortest Remaining Time First (preemptive SJF). Tick-by-tick simulation."""
+    if not processes:
+        return [], []
+    sorted_p = sorted(processes, key=lambda x: x[1])
+    remaining_bt = {p[0]: p[2] for p in sorted_p}
+    arrivals = {p[0]: p[1] for p in sorted_p}
+    burst_times = {p[0]: p[2] for p in sorted_p}
+    t = min(p[1] for p in sorted_p)
+    gantt = []
+    finish = {}
+    max_time = max(p[1] for p in sorted_p) + sum(p[2] for p in sorted_p) + 1
+    while len(finish) < len(sorted_p) and t < max_time:
+        available = [p for p in sorted_p if arrivals[p[0]] <= t and p[0] not in finish]
+        if not available:
+            t += 1
+            continue
+        chosen = min(available, key=lambda p: (remaining_bt[p[0]], arrivals[p[0]]))
+        pid = chosen[0]
+        gantt.append((pid, t, t + 1))
+        remaining_bt[pid] -= 1
+        if remaining_bt[pid] == 0:
+            finish[pid] = t + 1
+        t += 1
+    merged = []
+    for pid, s, e in gantt:
+        if merged and merged[-1][0] == pid and merged[-1][2] == s:
+            merged[-1] = (pid, merged[-1][1], e)
+        else:
+            merged.append((pid, s, e))
+    wt = []
+    for p in processes:
+        pid = p[0]
+        ft = finish.get(pid, 0)
+        wt.append(max(0, ft - arrivals[pid] - burst_times[pid]))
+    return merged, wt
+
+def generate_cpu_steps(algo_name, timeline, processes, priorities=None, quantum=None):
+    """Generate step-by-step explanations from a completed CPU scheduling timeline."""
+    steps = []
+    proc_info = {p[0]: {"at": p[1], "bt": p[2]} for p in processes}
+    remaining_bt = {p[0]: p[2] for p in processes}
+
+    for i, (pid, start, end) in enumerate(timeline):
+        duration = end - start
+        info = proc_info[pid]
+        arrived = [p for p in processes if p[1] <= start]
+        arrived_pids = [f"P{p[0]}" for p in arrived if p[0] != pid]
+        wait = start - info["at"]
+
+        if algo_name == "FCFS":
+            expl = (f"P{pid} runs t={start}→{end} (BT={duration}). "
+                    f"Arrived at t={info['at']}, waited {wait} units. "
+                    f"FCFS: processes run in arrival order — no preemption.")
+        elif algo_name == "SJF":
+            avail_desc = ", ".join(f"P{p[0]}(BT={p[2]})" for p in arrived if remaining_bt.get(p[0], 0) > 0 and p[0] != pid)
+            expl = (f"P{pid} selected (BT={info['bt']}). "
+                    f"{'Available: ' + avail_desc + '. ' if avail_desc else ''}"
+                    f"SJF picks the shortest burst time among arrived processes.")
+        elif algo_name == "SRTF":
+            rem = remaining_bt[pid]
+            preempted = i < len(timeline) - 1 and timeline[i + 1][0] != pid
+            expl = (f"P{pid} runs t={start}→{end} (remaining: {rem}→{rem - duration}). "
+                    f"{'PREEMPTED — shorter process available!' if preempted else 'Continues / completes.'}")
+        elif algo_name == "Priority":
+            pri_val = priorities.get(pid, 0) if priorities else 0
+            expl = (f"P{pid} selected (Priority={pri_val}, BT={info['bt']}). "
+                    f"Among arrived processes, P{pid} has the highest priority (lowest number).")
+        elif algo_name == "Round Robin":
+            expl = (f"P{pid} gets quantum slice t={start}→{end} ({duration} units). "
+                    f"Remaining BT: {remaining_bt[pid]}→{remaining_bt[pid] - duration}. "
+                    f"{'Process completes!' if remaining_bt[pid] - duration == 0 else 'Returns to end of ready queue.'}")
+        else:
+            expl = f"P{pid} runs t={start}→{end}."
+
+        remaining_bt[pid] -= duration
+        steps.append({
+            "idx": i + 1,
+            "time_range": f"t={start} → {end}",
+            "process": f"P{pid}",
+            "duration": duration,
+            "explanation": expl,
+            "gantt_up_to": timeline[:i + 1],
+        })
+    return steps
+
 def draw_gantt(timeline, title="Gantt Chart"):
     """Draw a Gantt chart with grey idle-time bars for CPU gaps."""
     # Insert IDLE segments wherever the CPU has no work
@@ -1844,7 +2015,7 @@ def draw_gantt(timeline, title="Gantt Chart"):
     for pid, start, end in filled:
         if pid == "IDLE":
             ax.barh(0, end - start, left=start, height=0.6,
-                    color="#2a3044", edgecolor="#0f1319", linewidth=1.5)
+                    color=BORDER_COLOR, edgecolor=PLOT_EDGE, linewidth=1.5)
             ax.text((start + end) / 2, 0, "IDLE", ha='center', va='center',
                     fontsize=8, color='#8892a4', fontfamily='monospace')
         else:
@@ -1852,7 +2023,7 @@ def draw_gantt(timeline, title="Gantt Chart"):
                 pid_colors[pid] = colors[ci % len(colors)]
                 ci += 1
             ax.barh(0, end - start, left=start, height=0.6,
-                    color=pid_colors[pid], edgecolor="#0f1319", linewidth=1.5)
+                    color=pid_colors[pid], edgecolor=PLOT_EDGE, linewidth=1.5)
             ax.text((start + end) / 2, 0, f"P{pid}", ha='center', va='center',
                     fontsize=9, fontweight='bold', color='white', fontfamily='monospace')
     all_times = sorted(set([t[1] for t in filled] + [filled[-1][2]]))
@@ -1866,44 +2037,59 @@ def draw_gantt(timeline, title="Gantt Chart"):
 
 def page_cpu():
     section_header("⚙️", "CPU Scheduling Simulator",
-                   "Simulate FCFS, SJF & Round Robin — compare algorithms visually")
+                   "Simulate FCFS, SJF, SRTF, Priority & Round Robin — compare algorithms visually")
 
     info_card("What is CPU Scheduling?",
               "The OS decides which process runs on the CPU and when. Try different algorithms below and observe how waiting time changes.", "accent")
 
     # ── Predefined examples ────────────────────────────────────────────────
     st.markdown('<div class="section-title">📥 Input</div>', unsafe_allow_html=True)
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5 = st.columns(5)
     if c1.button("📘 Basic"):
         st.session_state["cpu_input"] = "P1,0,6\nP2,1,4\nP3,2,2"
-    if c2.button("📙 Convoy Effect"):
+    if c2.button("📙 Convoy"):
         st.session_state["cpu_input"] = "P1,0,20\nP2,0,1\nP3,0,1"
     if c3.button("📗 Mixed AT"):
         st.session_state["cpu_input"] = "P1,0,8\nP2,2,4\nP3,4,1\nP4,6,3"
-    if c4.button("📕 SJF Classic"):
+    if c4.button("📒 Priority"):
+        st.session_state["cpu_input"] = "P1,0,6,3\nP2,1,4,1\nP3,2,2,2\nP4,3,3,4"
+    if c5.button("📓 SRTF"):
         st.session_state["cpu_input"] = "P1,0,7\nP2,2,4\nP3,4,1\nP4,5,4"
 
     col_inp, col_algo = st.columns([2, 1])
     with col_inp:
-        raw = st.text_area("Processes (Name, Arrival Time, Burst Time — one per line)",
+        raw = st.text_area("Processes (Name,AT,BT  or  Name,AT,BT,Priority)",
                            value=st.session_state.get("cpu_input", "P1,0,6\nP2,1,4\nP3,2,2"),
-                           height=130, help="Format: Name,ArrivalTime,BurstTime")
+                           height=130, help="Format: Name,ArrivalTime,BurstTime[,Priority]  — Priority is optional (lower=higher)")
     with col_algo:
-        algorithms = st.multiselect("Algorithms", ["FCFS", "SJF", "Round Robin"],
+        algorithms = st.multiselect("Algorithms", ["FCFS", "SJF", "SRTF", "Priority", "Round Robin"],
                                     default=["FCFS", "SJF", "Round Robin"])
         quantum = st.number_input("RR Quantum", min_value=1, max_value=20, value=2)
 
+    step_mode = st.toggle("🔍 Step-by-step Mode", value=False, key="cpu_step_mode")
+
     try:
         processes = []
+        proc_priorities = {}
         for i, line in enumerate(raw.strip().split("\n")):
             parts = [p.strip() for p in line.split(",")]
-            processes.append((i + 1, int(parts[1]), int(parts[2])))
+            pid = i + 1
+            at = int(parts[1])
+            bt = int(parts[2])
+            pri = int(parts[3]) if len(parts) >= 4 else 0
+            processes.append((pid, at, bt))
+            proc_priorities[pid] = pri
     except (ValueError, IndexError):
-        st.error("⚠️ Invalid format. Use: Name,ArrivalTime,BurstTime")
+        st.error("⚠️ Invalid format. Use: Name,ArrivalTime,BurstTime[,Priority]")
         return
 
-    df_in = pd.DataFrame([(f"P{p[0]}", p[1], p[2]) for p in processes],
-                         columns=["Process", "Arrival Time", "Burst Time"])
+    has_priority = "Priority" in algorithms
+    cols = ["Process", "Arrival Time", "Burst Time"]
+    data = [(f"P{p[0]}", p[1], p[2]) for p in processes]
+    if has_priority:
+        cols.append("Priority")
+        data = [(f"P{p[0]}", p[1], p[2], proc_priorities[p[0]]) for p in processes]
+    df_in = pd.DataFrame(data, columns=cols)
     st.dataframe(df_in, use_container_width=True, hide_index=True)
     st.markdown("---")
 
@@ -1913,16 +2099,41 @@ def page_cpu():
         return
 
     results = {}
-    if "FCFS" in algorithms:       results["FCFS"]        = fcfs(processes)
-    if "SJF" in algorithms:        results["SJF"]         = sjf(processes)
+    if "FCFS"        in algorithms: results["FCFS"]        = fcfs(processes)
+    if "SJF"         in algorithms: results["SJF"]         = sjf(processes)
+    if "SRTF"        in algorithms: results["SRTF"]        = srtf(processes)
+    if "Priority"    in algorithms: results["Priority"]    = priority_scheduling(processes, proc_priorities)
     if "Round Robin" in algorithms: results["Round Robin"] = round_robin(processes, quantum)
 
-    algo_icons = {"FCFS": "🔵", "SJF": "🟠", "Round Robin": "🟢"}
+    algo_icons = {"FCFS": "🔵", "SJF": "🟠", "SRTF": "🔴", "Priority": "🟣", "Round Robin": "🟢"}
 
     for algo_name, (tl, wt) in results.items():
         st.markdown(f'<div class="section-title">{algo_icons.get(algo_name,"")} {algo_name}</div>', unsafe_allow_html=True)
-        fig = draw_gantt(tl, f"{algo_name} — Gantt Chart")
-        close_show(fig)
+
+        if step_mode and tl:
+            # ── Step-by-step display ──────────────────────────────
+            steps = generate_cpu_steps(algo_name, tl, processes,
+                                       priorities=proc_priorities if algo_name == "Priority" else None,
+                                       quantum=quantum if algo_name == "Round Robin" else None)
+            step_idx = st.slider(f"Step", 0, len(steps) - 1, len(steps) - 1,
+                                 key=f"cpu_step_{algo_name}")
+            current = steps[step_idx]
+
+            # Explanation card
+            st.markdown(
+                f'<div class="os-card os-card-accent">'
+                f'<b style="color:{ACCENT}">Step {current["idx"]}/{len(steps)}</b> — '
+                f'{current["process"]} · {current["time_range"]}<br>'
+                f'<span style="color:#b0b8cc;font-size:0.95rem">{current["explanation"]}</span></div>',
+                unsafe_allow_html=True,
+            )
+
+            # Partial Gantt chart
+            fig = draw_gantt(current["gantt_up_to"], f"{algo_name} — Step {current['idx']}/{len(steps)}")
+            close_show(fig)
+        else:
+            fig = draw_gantt(tl, f"{algo_name} — Gantt Chart")
+            close_show(fig)
 
         # Per-process metrics table
         pid_finish = {}
@@ -1944,21 +2155,14 @@ def page_cpu():
         mc1.metric("Avg Waiting Time",     f"{avg_wt} units")
         mc2.metric("Avg Turnaround Time",  f"{avg_tat} units")
 
-        # What is happening explanation
         explain = {
             "FCFS": "**FCFS:** Processes ran in arrival order. Simple, fair, but can cause convoy effect when a long process arrives first.",
             "SJF": "**SJF:** Shortest burst time ran first. Minimizes average waiting time but requires knowing burst times in advance.",
+            "SRTF": "**SRTF (Preemptive SJF):** At every time unit, the process with the shortest *remaining* burst time runs. Optimal for avg WT but causes frequent context switches.",
+            "Priority": f"**Priority:** Processes ran in priority order (lower number = higher priority). Non-preemptive — once started, runs to completion.",
             "Round Robin": f"**Round Robin (Q={quantum}):** Each process got {quantum} time units then yielded CPU. Fair, prevents starvation, good for interactive systems.",
         }
         st.info(f"💬 **What happened?** {explain.get(algo_name,'')}")
-
-        why_best = {
-            "FCFS": "Best when: all jobs have similar burst times, or simplicity is needed. Worst when: long jobs arrive before short ones (convoy effect).",
-            "SJF": "Best when: burst times are known in advance, batch systems. Not good for interactive systems because long processes may starve.",
-            "Round Robin": f"Best when: interactive or time-sharing system. Quantum {quantum} means response time ≤ {quantum * len(processes)} units for any process.",
-        }
-        with st.expander(f"📋 Why use {algo_name}? When is it best?"):
-            st.markdown(why_best.get(algo_name, ""))
         st.markdown("---")
 
     # ── Comparison ─────────────────────────────────────────────────────────
@@ -1970,7 +2174,6 @@ def page_cpu():
             pid_finish = {}
             for pid, s, e in tl:
                 if e > pid_finish.get(pid, 0): pid_finish[pid] = e
-            # Fallback: use at + bt (not 0) so TAT is never negative for unseen pids
             rows = [(processes[i][0], processes[i][1], processes[i][2],
                      pid_finish.get(processes[i][0], processes[i][1] + processes[i][2])) for i in range(len(processes))]
             comp_wt[algo_name]  = round(sum(wt) / len(wt), 2)
@@ -1979,43 +2182,31 @@ def page_cpu():
         fig_cmp, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3.5))
         for ax in (ax1, ax2):
             ax.set_facecolor(BG_CARD)
-            ax.spines[:].set_color("#2a3044")
+            ax.spines[:].set_color(BORDER_COLOR)
             ax.tick_params(colors=TEXT_LIGHT)
         fig_cmp.patch.set_facecolor(BG_DARK)
 
-        bar_colors = [ACCENT, ACCENT2, SUCCESS]
+        bar_colors = [ACCENT, ACCENT2, DANGER, PURPLE, SUCCESS]
         names = list(comp_wt.keys())
-        ax1.bar(names, comp_wt.values(), color=bar_colors[:len(names)], edgecolor="#0f1319", width=0.5)
+        ax1.bar(names, comp_wt.values(), color=bar_colors[:len(names)], edgecolor=PLOT_EDGE, width=0.5)
         ax1.set_title("Avg Waiting Time",     color=TEXT_LIGHT, fontfamily='monospace')
         ax1.set_ylabel("Time Units", color=TEXT_LIGHT)
         for i, v in enumerate(comp_wt.values()):
             ax1.text(i, v + 0.1, str(v), ha='center', color=TEXT_LIGHT, fontsize=10)
+        ax1.tick_params(axis='x', rotation=20)
 
-        ax2.bar(names, comp_tat.values(), color=bar_colors[:len(names)], edgecolor="#0f1319", width=0.5)
+        ax2.bar(names, comp_tat.values(), color=bar_colors[:len(names)], edgecolor=PLOT_EDGE, width=0.5)
         ax2.set_title("Avg Turnaround Time",  color=TEXT_LIGHT, fontfamily='monospace')
         ax2.set_ylabel("Time Units", color=TEXT_LIGHT)
         for i, v in enumerate(comp_tat.values()):
             ax2.text(i, v + 0.1, str(v), ha='center', color=TEXT_LIGHT, fontsize=10)
+        ax2.tick_params(axis='x', rotation=20)
 
         plt.tight_layout()
         close_show(fig_cmp)
 
         best = min(comp_wt, key=comp_wt.get)
         st.success(f"🏆 **Best Algorithm:** {best} (Avg WT = {comp_wt[best]} units)")
-
-        with st.expander("📋 Why others are not best + Common Mistakes"):
-            for algo_name in results:
-                if algo_name != best:
-                    st.markdown(f"**Why not {algo_name}?** Avg WT = {comp_wt[algo_name]} vs {comp_wt[best]} for {best}.")
-            st.markdown("---")
-            st.markdown("""
-**⚠️ Common Student Mistakes in CPU Scheduling:**
-- Forgetting to subtract AT when computing WT → WT = TAT − BT, not CT − AT
-- Drawing Gantt chart without accounting for idle CPU time (when no process available)
-- In Round Robin, not tracking remaining burst time carefully
-- Confusing turnaround time (CT−AT) with waiting time (TAT−BT)
-- Claiming FCFS never has waiting time — it does whenever a process must wait
-""")
 
 # ═════════════════════════════════════════════════════════════════════════════
 # ██  MEMORY MANAGEMENT SIMULATOR
@@ -2112,7 +2303,8 @@ def page_memory():
         st.warning("⚠️ Please select at least one algorithm to run.")
         return
 
-    # Belady's anomaly info
+    step_mode = st.toggle("🔍 Step-by-step Mode", value=False, key="mem_step_mode")
+
     if "FIFO" in algorithms_mem:
         st.info("ℹ️ **Belady's Anomaly** (FIFO only): Adding more frames can sometimes INCREASE page faults! Try the Belady example with 3 vs 4 frames.")
 
@@ -2132,48 +2324,89 @@ def page_memory():
         c2.metric("Page Faults", faults)
         c3.metric("Hit Rate", f"{round((1 - faults/len(pages))*100, 1)}%")
 
-        # Step-by-step table
-        rows = []
-        for step, (mem_state, fault, page) in enumerate(history):
-            row = {"Step": step+1, "Page Ref": page, "Status": "❌ FAULT" if fault else "✅ HIT"}
-            for fi in range(frames):
-                row[f"Frame {fi+1}"] = mem_state[fi] if fi < len(mem_state) else "—"
-            rows.append(row)
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        if step_mode:
+            # ── Step-by-step mode ────────────────────────────────
+            step_idx = st.slider(f"Reference Step", 0, len(history) - 1, 0,
+                                 key=f"mem_step_{algo}")
+            mem_state, fault, page = history[step_idx]
 
-        # Frame-state heatmap
-        fig, ax = styled_fig(12, 2.5)
-        for step, (mem_state, fault, page) in enumerate(history):
-            for fi, pg in enumerate(mem_state):
-                is_new = (pg == page and fault)
-                color = DANGER if is_new else (ACCENT if pg == page else "#2a3044")
-                ax.add_patch(plt.Rectangle((step, fi), 0.9, 0.9,
-                                            facecolor=color, edgecolor="#0f1319", linewidth=1))
-                ax.text(step+0.45, fi+0.45, str(pg), ha='center', va='center',
-                        fontsize=8, color='white', fontfamily='monospace')
-        ax.set_xlim(-0.1, len(pages))
-        ax.set_ylim(-0.1, frames)
-        ax.set_xticks(range(len(pages)))
-        ax.set_xticklabels([str(p) for p in pages], fontsize=8, color=TEXT_LIGHT)
-        ax.set_yticks([f+0.45 for f in range(frames)])
-        ax.set_yticklabels([f"Frame {f+1}" for f in range(frames)], color=TEXT_LIGHT, fontsize=8)
-        ax.set_title(f"{algo} — Frame State (🔴=fault load, 🔵=page accessed)", color=TEXT_LIGHT, fontfamily='monospace')
-        close_show(fig)
+            # Generate explanation
+            if fault:
+                if step_idx > 0:
+                    prev_state = history[step_idx - 1][0]
+                    evicted = [p for p in prev_state if p not in mem_state]
+                    evict_text = f" Evicted page {evicted[0]}." if evicted else ""
+                else:
+                    evict_text = ""
+                expl = (f"Page **{page}** NOT in frames {history[step_idx-1][0] if step_idx > 0 else []} "
+                        f"→ **PAGE FAULT** ❌.{evict_text} Loaded page {page}.")
+            else:
+                expl = f"Page **{page}** already in frames → **HIT** ✅. No change needed."
+
+            result_color = DANGER if fault else SUCCESS
+            st.markdown(
+                f'<div class="os-card" style="border-left:4px solid {result_color}">'
+                f'<b style="color:{result_color}">Step {step_idx+1}/{len(history)}</b> — '
+                f'Page {page} · {"FAULT ❌" if fault else "HIT ✅"}<br>'
+                f'<span style="color:#b0b8cc">{expl}</span><br>'
+                f'<span style="color:{ACCENT}">Frames: {mem_state}</span></div>',
+                unsafe_allow_html=True,
+            )
+
+            # Partial heatmap up to current step
+            fig, ax = styled_fig(12, 2.5)
+            for s in range(step_idx + 1):
+                ms, ft, pg = history[s]
+                for fi, pg_in_frame in enumerate(ms):
+                    is_new = (pg_in_frame == pg and ft)
+                    is_current = (s == step_idx)
+                    color = DANGER if (is_new and is_current) else (ACCENT if (pg_in_frame == pg and is_current) else BORDER_COLOR)
+                    ax.add_patch(plt.Rectangle((s, fi), 0.9, 0.9,
+                                                facecolor=color, edgecolor=PLOT_EDGE, linewidth=1))
+                    ax.text(s+0.45, fi+0.45, str(pg_in_frame), ha='center', va='center',
+                            fontsize=8, color='white', fontfamily='monospace')
+            ax.set_xlim(-0.1, step_idx + 1.5)
+            ax.set_ylim(-0.1, frames)
+            ax.set_xticks(range(step_idx + 1))
+            ax.set_xticklabels([str(pages[j]) for j in range(step_idx + 1)], fontsize=8, color=TEXT_LIGHT)
+            ax.set_yticks([f+0.45 for f in range(frames)])
+            ax.set_yticklabels([f"Frame {f+1}" for f in range(frames)], color=TEXT_LIGHT, fontsize=8)
+            ax.set_title(f"{algo} — Step {step_idx+1}/{len(history)}", color=TEXT_LIGHT, fontfamily='monospace')
+            close_show(fig)
+        else:
+            # ── Normal full display ───────────────────────────────
+            rows = []
+            for step, (mem_state, fault, page) in enumerate(history):
+                row = {"Step": step+1, "Page Ref": page, "Status": "❌ FAULT" if fault else "✅ HIT"}
+                for fi in range(frames):
+                    row[f"Frame {fi+1}"] = mem_state[fi] if fi < len(mem_state) else "—"
+                rows.append(row)
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+            fig, ax = styled_fig(12, 2.5)
+            for step, (mem_state, fault, page) in enumerate(history):
+                for fi, pg in enumerate(mem_state):
+                    is_new = (pg == page and fault)
+                    color = DANGER if is_new else (ACCENT if pg == page else BORDER_COLOR)
+                    ax.add_patch(plt.Rectangle((step, fi), 0.9, 0.9,
+                                                facecolor=color, edgecolor=PLOT_EDGE, linewidth=1))
+                    ax.text(step+0.45, fi+0.45, str(pg), ha='center', va='center',
+                            fontsize=8, color='white', fontfamily='monospace')
+            ax.set_xlim(-0.1, len(pages))
+            ax.set_ylim(-0.1, frames)
+            ax.set_xticks(range(len(pages)))
+            ax.set_xticklabels([str(p) for p in pages], fontsize=8, color=TEXT_LIGHT)
+            ax.set_yticks([f+0.45 for f in range(frames)])
+            ax.set_yticklabels([f"Frame {f+1}" for f in range(frames)], color=TEXT_LIGHT, fontsize=8)
+            ax.set_title(f"{algo} — Frame State (🔴=fault load, 🔵=page accessed)", color=TEXT_LIGHT, fontfamily='monospace')
+            close_show(fig)
 
         explain_mem = {
             "FIFO":    f"FIFO evicts the oldest page. Simple but suffers from Belady's Anomaly. Faults: {faults}",
             "LRU":     f"LRU evicts the Least Recently Used page. Good practical performance. Faults: {faults}",
-            "Optimal": f"Optimal replaces the page used furthest in the future — theoretical lower bound. Faults: {faults} (minimum possible).",
+            "Optimal": f"Optimal replaces the page used furthest in the future — theoretical lower bound. Faults: {faults}",
         }
         st.info(f"💬 {explain_mem.get(algo, '')}")
-
-        why = {
-            "FIFO": "Not always best. The Belady's Anomaly means more frames → more faults (counterintuitive!). Not used in modern OS alone.",
-            "LRU": "Approximated in real OS using reference bits or clock algorithm. Near-optimal in practice. No Belady's Anomaly.",
-            "Optimal": "Cannot be implemented in practice — requires knowing the future. Used only as a benchmark to measure how far other algorithms are from ideal.",
-        }
-        with st.expander(f"📋 {algo} — Analysis"):
-            st.markdown(why.get(algo, ""))
         st.markdown("---")
 
     # Comparison bar chart
@@ -2183,7 +2416,7 @@ def page_memory():
         fig3, ax3 = styled_fig(6, 3)
         colors_bar = [ACCENT, ACCENT2, SUCCESS]
         bars = ax3.bar(comp.keys(), comp.values(), color=colors_bar[:len(comp)],
-                       edgecolor="#0f1319", linewidth=1.5, width=0.5)
+                       edgecolor=PLOT_EDGE, linewidth=1.5, width=0.5)
         for bar, val in zip(bars, comp.values()):
             ax3.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.1, str(val),
                      ha='center', color=TEXT_LIGHT, fontsize=11, fontfamily='monospace')
@@ -2193,17 +2426,6 @@ def page_memory():
 
         best = min(comp, key=comp.get)
         st.success(f"🏆 **{best}** has fewest page faults ({comp[best]})")
-        if "Optimal" in comp:
-            st.info("ℹ️ Optimal is always best but CANNOT be used in practice — it requires knowing future page references (impossible at runtime).")
-
-        with st.expander("⚠️ Common Student Mistakes — Memory Management"):
-            st.markdown("""
-- **Belady's Anomaly**: Students assume more frames always helps — only true for LRU and Optimal, NOT for FIFO
-- **Optimal ≠ LRU**: Optimal looks forward (future), LRU looks backward (past history) — different!
-- **Page fault ≠ page replacement**: Page fault happens when page not in memory; replacement only if memory is FULL
-- **Not tracking the frame state carefully**: In exams, trace each step — write the full frame contents at every reference
-- **Forgetting the dirty bit**: In real systems, modified pages must be written to disk before eviction (extra I/O)
-""")
 
 # ═════════════════════════════════════════════════════════════════════════════
 # ██  DISK SCHEDULING SIMULATOR (extended: + C-SCAN, LOOK, C-LOOK)
@@ -2318,6 +2540,7 @@ def page_disk():
         st.warning("⚠️ Please select at least one algorithm to run.")
         return
 
+    step_mode = st.toggle("🔍 Step-by-step Mode", value=False, key="disk_step_mode")
     st.markdown("---")
 
     results_disk = {}
@@ -2331,38 +2554,114 @@ def page_disk():
     if not results_disk:
         return
 
-    # Draw graphs — 3 per row
-    algo_list = list(results_disk.items())
     colors_disk = {"FCFS": ACCENT, "SSTF": ACCENT2, "SCAN": SUCCESS,
                    "C-SCAN": WARNING, "LOOK": PURPLE, "C-LOOK": TEAL}
 
-    for row_start in range(0, len(algo_list), 3):
-        batch = algo_list[row_start:row_start+3]
-        fig, axes = plt.subplots(1, len(batch), figsize=(6*len(batch), 5))
-        if len(batch) == 1:
-            axes = [axes]
-        fig.patch.set_facecolor(BG_DARK)
+    algo_explain = {
+        "FCFS":   "Services requests in arrival order. Fair but inefficient — large head movement.",
+        "SSTF":   "Always picks the closest request. Greedy — good average but risks **starvation** of far tracks.",
+        "SCAN":   "Elevator algorithm — moves in one direction to end of disk, reverses. Fair, no starvation.",
+        "C-SCAN": "One-directional SCAN — jumps from end back to start. More uniform wait times.",
+        "LOOK":   "Like SCAN but only goes as far as the last request in each direction. More efficient than SCAN.",
+        "C-LOOK": "Like C-SCAN but jumps back to lowest request (not track 0). Best practical algorithm.",
+    }
 
-        for ax, (algo, (order, seek)) in zip(axes, batch):
-            ax.set_facecolor(BG_CARD)
-            path = [head_pos] + order
+    if step_mode:
+        # ── Step-by-step mode ─────────────────────────────────────
+        for algo, (order, seek) in results_disk.items():
             color = colors_disk.get(algo, ACCENT)
-            ax.plot(path, range(len(path)), marker='o', color=color,
+            st.markdown(f'<div class="section-title" style="color:{color}">{algo}</div>', unsafe_allow_html=True)
+
+            path = [head_pos] + order
+            step_idx = st.slider(f"Movement Step", 0, len(order), 0, key=f"disk_step_{algo}")
+
+            if step_idx > 0:
+                curr = path[step_idx]
+                prev = path[step_idx - 1]
+                dist = abs(curr - prev)
+                partial_seek = sum(abs(path[j+1] - path[j]) for j in range(step_idx))
+                direction = "→" if curr > prev else "←"
+
+                # Generate explanation based on algorithm
+                if algo == "FCFS":
+                    expl = f"Head moves {direction} to track {curr} (next in queue order). Distance: {dist}."
+                elif algo == "SSTF":
+                    expl = f"Head moves {direction} to track {curr} (closest request). Distance: {dist}."
+                elif algo in ("SCAN", "LOOK"):
+                    expl = f"Head moves {direction} to track {curr}. {algo} continues in current direction. Distance: {dist}."
+                elif algo in ("C-SCAN", "C-LOOK"):
+                    if curr < prev and step_idx > 1:
+                        expl = f"Head jumps back to track {curr} (circular reset). Distance: {dist}."
+                    else:
+                        expl = f"Head moves {direction} to track {curr}. Distance: {dist}."
+                else:
+                    expl = f"Head moves to track {curr}. Distance: {dist}."
+
+                st.markdown(
+                    f'<div class="os-card os-card-accent">'
+                    f'<b style="color:{color}">Step {step_idx}/{len(order)}</b> — '
+                    f'Track {prev} → {curr}<br>'
+                    f'<span style="color:#b0b8cc">{expl}</span><br>'
+                    f'<span style="color:{ACCENT}">Total seek so far: {partial_seek} / {seek}</span></div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f'<div class="os-card os-card-accent">'
+                    f'<b style="color:{color}">Start</b> — Head at track {head_pos}. '
+                    f'Move the slider to begin stepping through the algorithm.<br>'
+                    f'<span style="color:#b0b8cc">{algo_explain.get(algo, "")}</span></div>',
+                    unsafe_allow_html=True,
+                )
+
+            # Draw partial path
+            partial_path = path[:step_idx + 1]
+            fig, ax = styled_fig(8, 5)
+            ax.set_facecolor(BG_CARD)
+            ax.plot(partial_path, range(len(partial_path)), marker='o', color=color,
                     linewidth=2.5, markersize=7, markerfacecolor='white', markeredgecolor=color)
             ax.axvline(x=head_pos, color='yellow', linestyle='--', alpha=0.5, linewidth=1)
-            # Annotate requests on Y axis
-            for j, t in enumerate(path[1:], 1):
+            for j, t in enumerate(partial_path[1:], 1):
                 ax.text(t + 2, j, str(t), va='center', fontsize=7, color='#8892a4')
-            ax.set_title(f"{algo}\nSeek: {seek}", color=TEXT_LIGHT, fontfamily='monospace', fontsize=11)
+            ax.set_title(f"{algo} — Step {step_idx}/{len(order)}", color=TEXT_LIGHT, fontfamily='monospace')
             ax.set_xlabel("Track Number", color=TEXT_LIGHT)
             ax.set_ylabel("Request Order", color=TEXT_LIGHT)
-            ax.spines[:].set_color("#2a3044")
+            ax.spines[:].set_color(BORDER_COLOR)
             ax.tick_params(colors=TEXT_LIGHT)
             ax.set_xlim(0, disk_size)
+            ax.set_ylim(-0.5, len(path) + 0.5)
             ax.invert_yaxis()
+            close_show(fig)
+            st.markdown("---")
+    else:
+        # ── Normal full display ───────────────────────────────────
+        algo_list = list(results_disk.items())
+        for row_start in range(0, len(algo_list), 3):
+            batch = algo_list[row_start:row_start+3]
+            fig, axes = plt.subplots(1, len(batch), figsize=(6*len(batch), 5))
+            if len(batch) == 1:
+                axes = [axes]
+            fig.patch.set_facecolor(BG_DARK)
 
-        plt.tight_layout()
-        close_show(fig)
+            for ax, (algo, (order, seek)) in zip(axes, batch):
+                ax.set_facecolor(BG_CARD)
+                path = [head_pos] + order
+                color = colors_disk.get(algo, ACCENT)
+                ax.plot(path, range(len(path)), marker='o', color=color,
+                        linewidth=2.5, markersize=7, markerfacecolor='white', markeredgecolor=color)
+                ax.axvline(x=head_pos, color='yellow', linestyle='--', alpha=0.5, linewidth=1)
+                for j, t in enumerate(path[1:], 1):
+                    ax.text(t + 2, j, str(t), va='center', fontsize=7, color='#8892a4')
+                ax.set_title(f"{algo}\nSeek: {seek}", color=TEXT_LIGHT, fontfamily='monospace', fontsize=11)
+                ax.set_xlabel("Track Number", color=TEXT_LIGHT)
+                ax.set_ylabel("Request Order", color=TEXT_LIGHT)
+                ax.spines[:].set_color(BORDER_COLOR)
+                ax.tick_params(colors=TEXT_LIGHT)
+                ax.set_xlim(0, disk_size)
+                ax.invert_yaxis()
+
+            plt.tight_layout()
+            close_show(fig)
 
     # Summary table
     section_header("📊", "Summary Comparison")
@@ -2374,29 +2673,495 @@ def page_disk():
     best_disk = min(results_disk, key=lambda k: results_disk[k][1])
     st.success(f"🏆 **{best_disk}** minimizes total seek distance ({results_disk[best_disk][1]} tracks)")
 
-    # Algorithm explanations
-    algo_explain = {
-        "FCFS":   "Services requests in arrival order. Fair but inefficient — large head movement.",
-        "SSTF":   "Always picks the closest request. Greedy — good average but risks **starvation** of far tracks.",
-        "SCAN":   "Elevator algorithm — moves in one direction to end of disk, reverses. Fair, no starvation.",
-        "C-SCAN": "One-directional SCAN — jumps from end back to start. More uniform wait times.",
-        "LOOK":   "Like SCAN but only goes as far as the last request in each direction. More efficient than SCAN.",
-        "C-LOOK": "Like C-SCAN but jumps back to lowest request (not track 0). Best practical algorithm.",
-    }
     with st.expander("📋 Algorithm Explanations"):
         for algo, (order, seek) in results_disk.items():
             color = colors_disk.get(algo, ACCENT)
             st.markdown(f'<span style="color:{color}">**{algo}**</span>: {algo_explain.get(algo,"")}', unsafe_allow_html=True)
 
-    with st.expander("⚠️ Common Student Mistakes — Disk Scheduling"):
-        st.markdown("""
-- **SCAN vs LOOK**: Students often draw SCAN stopping at last request — SCAN goes to END of disk; LOOK stops at last request
-- **Seek distance calculation**: Must include the jump back in C-SCAN (from last track to 0, then to first request)
-- **SSTF starvation**: Students think SSTF is always best — it can starve requests far from the current head position
-- **SSDs**: Disk scheduling algorithms are irrelevant for SSDs — no physical head movement
-- **Not accounting for direction**: SCAN must continue in current direction first, not jump to closest
-""")
+# ═════════════════════════════════════════════════════════════════════════════
+# ██  BANKER'S ALGORITHM SIMULATOR
+# ═════════════════════════════════════════════════════════════════════════════
 
+def bankers_safety(allocation, max_matrix, available):
+    """Run Banker's Safety Algorithm. Returns (is_safe, safe_sequence, steps)."""
+    n = len(allocation)
+    m = len(available)
+    need = [[max_matrix[i][j] - allocation[i][j] for j in range(m)] for i in range(n)]
+    work = list(available)
+    finish = [False] * n
+    safe_seq = []
+    steps = []
+
+    for iteration in range(n):
+        found = False
+        for i in range(n):
+            if not finish[i] and all(need[i][j] <= work[j] for j in range(m)):
+                step = {
+                    "iteration": iteration + 1,
+                    "process": f"P{i}",
+                    "need": list(need[i]),
+                    "work_before": list(work),
+                    "alloc": list(allocation[i]),
+                    "work_after": [work[j] + allocation[i][j] for j in range(m)],
+                    "explanation": (f"P{i}: Need {need[i]} ≤ Work {work} ✅ → "
+                                    f"P{i} can finish. Release resources: Work = {work} + {list(allocation[i])} = "
+                                    f"{[work[j] + allocation[i][j] for j in range(m)]}"),
+                    "safe_so_far": list(safe_seq) + [f"P{i}"],
+                }
+                steps.append(step)
+                work = [work[j] + allocation[i][j] for j in range(m)]
+                finish[i] = True
+                safe_seq.append(f"P{i}")
+                found = True
+                break
+        if not found:
+            # Check which processes failed
+            for i in range(n):
+                if not finish[i]:
+                    steps.append({
+                        "iteration": iteration + 1,
+                        "process": f"P{i}",
+                        "need": list(need[i]),
+                        "work_before": list(work),
+                        "alloc": list(allocation[i]),
+                        "work_after": list(work),
+                        "explanation": f"P{i}: Need {need[i]} > Work {work} ❌ — Cannot proceed. DEADLOCK RISK!",
+                        "safe_so_far": list(safe_seq),
+                    })
+            break
+
+    is_safe = all(finish)
+    return is_safe, safe_seq, steps, need
+
+def page_bankers():
+    section_header("🏦", "Banker's Algorithm Simulator",
+                   "Deadlock avoidance — check if a state is safe")
+
+    info_card("What is the Banker's Algorithm?",
+              "The Banker's Algorithm determines whether granting a resource request will leave the system in a safe state. "
+              "A state is **safe** if there exists a sequence of processes that can all finish without deadlock.", "accent")
+
+    st.markdown('<div class="section-title">📥 Input</div>', unsafe_allow_html=True)
+
+    c1, c2 = st.columns(2)
+    if c1.button("📘 Classic 5P×3R"):
+        st.session_state["bank_n"] = 5
+        st.session_state["bank_m"] = 3
+        st.session_state["bank_alloc"] = "0 1 0\n2 0 0\n3 0 2\n2 1 1\n0 0 2"
+        st.session_state["bank_max"]   = "7 5 3\n3 2 2\n9 0 2\n2 2 2\n4 3 3"
+        st.session_state["bank_avail"] = "3 3 2"
+    if c2.button("📙 Unsafe Example"):
+        st.session_state["bank_n"] = 3
+        st.session_state["bank_m"] = 3
+        st.session_state["bank_alloc"] = "2 1 0\n1 0 2\n1 2 1"
+        st.session_state["bank_max"]   = "4 3 2\n3 2 4\n3 4 3"
+        st.session_state["bank_avail"] = "1 0 1"
+
+    col_n, col_m = st.columns(2)
+    with col_n:
+        n_proc = st.number_input("Number of Processes", 2, 8, st.session_state.get("bank_n", 5))
+    with col_m:
+        m_res = st.number_input("Number of Resource Types", 2, 5, st.session_state.get("bank_m", 3))
+
+    default_alloc = st.session_state.get("bank_alloc", "\n".join(["0 " * m_res] * n_proc))
+    default_max   = st.session_state.get("bank_max",   "\n".join(["0 " * m_res] * n_proc))
+    default_avail = st.session_state.get("bank_avail", " ".join(["3"] * m_res))
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        alloc_raw = st.text_area("Allocation Matrix (one row per process, space-separated)",
+                                  value=default_alloc, height=140)
+    with col_b:
+        max_raw = st.text_area("Max Matrix (one row per process, space-separated)",
+                                value=default_max, height=140)
+
+    avail_raw = st.text_input("Available Resources (space-separated)", value=default_avail)
+
+    try:
+        allocation = [[int(x) for x in row.strip().split()] for row in alloc_raw.strip().split("\n") if row.strip()]
+        max_matrix = [[int(x) for x in row.strip().split()] for row in max_raw.strip().split("\n") if row.strip()]
+        available  = [int(x) for x in avail_raw.strip().split()]
+
+        if len(allocation) != n_proc or len(max_matrix) != n_proc:
+            st.error(f"Expected {n_proc} rows in each matrix, got Alloc={len(allocation)}, Max={len(max_matrix)}")
+            return
+        for i in range(n_proc):
+            if len(allocation[i]) != m_res or len(max_matrix[i]) != m_res:
+                st.error(f"Row P{i}: expected {m_res} columns")
+                return
+            for j in range(m_res):
+                if allocation[i][j] > max_matrix[i][j]:
+                    st.error(f"P{i}: Allocation[{j}]={allocation[i][j]} > Max[{j}]={max_matrix[i][j]} — invalid!")
+                    return
+        if len(available) != m_res:
+            st.error(f"Available must have {m_res} values")
+            return
+    except (ValueError, IndexError) as e:
+        st.error(f"Invalid input: {e}")
+        return
+
+    st.markdown("---")
+
+    # ── Display matrices ───────────────────────────────────────────────────
+    need = [[max_matrix[i][j] - allocation[i][j] for j in range(m_res)] for i in range(n_proc)]
+    res_labels = [f"R{j}" for j in range(m_res)]
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown(f'<b style="color:{ACCENT}">Allocation</b>', unsafe_allow_html=True)
+        df_alloc = pd.DataFrame(allocation, columns=res_labels, index=[f"P{i}" for i in range(n_proc)])
+        st.dataframe(df_alloc, use_container_width=True)
+    with col2:
+        st.markdown(f'<b style="color:{ACCENT2}">Max</b>', unsafe_allow_html=True)
+        df_max = pd.DataFrame(max_matrix, columns=res_labels, index=[f"P{i}" for i in range(n_proc)])
+        st.dataframe(df_max, use_container_width=True)
+    with col3:
+        st.markdown(f'<b style="color:{WARNING}">Need (Max - Alloc)</b>', unsafe_allow_html=True)
+        df_need = pd.DataFrame(need, columns=res_labels, index=[f"P{i}" for i in range(n_proc)])
+        st.dataframe(df_need, use_container_width=True)
+
+    st.markdown(f'<b style="color:{SUCCESS}">Available:</b> {available}', unsafe_allow_html=True)
+    st.markdown("---")
+
+    # ── Run Safety Algorithm ───────────────────────────────────────────────
+    section_header("🔍", "Safety Algorithm — Step-by-Step")
+    is_safe, safe_seq, steps, _ = bankers_safety(allocation, max_matrix, available)
+
+    step_idx = st.slider("Safety Check Step", 0, len(steps) - 1, len(steps) - 1, key="bank_step")
+    current = steps[step_idx]
+
+    is_success = "✅" in current["explanation"]
+    color = SUCCESS if is_success else DANGER
+    st.markdown(
+        f'<div class="os-card" style="border-left:4px solid {color}">'
+        f'<b style="color:{color}">Iteration {current["iteration"]}</b> — {current["process"]}<br>'
+        f'<span style="color:#b0b8cc">{current["explanation"]}</span><br>'
+        f'<span style="color:{ACCENT}">Safe sequence so far: {" → ".join(current["safe_so_far"]) if current["safe_so_far"] else "(empty)"}</span></div>',
+        unsafe_allow_html=True,
+    )
+
+    # Work vector progress bar
+    fig, ax = styled_fig(8, 1.5)
+    x = range(m_res)
+    bars = ax.bar([f"R{j}" for j in x], current["work_after"], color=SUCCESS, edgecolor=PLOT_EDGE, width=0.5, label="Work (after)")
+    ax.bar([f"R{j}" for j in x], current["work_before"], color=ACCENT, edgecolor=PLOT_EDGE, width=0.3, alpha=0.6, label="Work (before)")
+    for bar, val in zip(bars, current["work_after"]):
+        ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.1, str(val),
+                ha='center', color=TEXT_LIGHT, fontsize=10)
+    ax.set_title("Work Vector", color=TEXT_LIGHT, fontfamily='monospace')
+    ax.legend(facecolor=BG_CARD, edgecolor=BORDER_COLOR, labelcolor=TEXT_LIGHT, fontsize=8)
+    close_show(fig)
+
+    st.markdown("---")
+
+    # ── Final Result ──────────────────────────────────────────────────────
+    if is_safe:
+        st.success(f"✅ **SAFE STATE** — Safe sequence: {' → '.join(safe_seq)}")
+        st.info("💬 All processes can complete without deadlock. The system can grant resources safely.")
+    else:
+        st.error("❌ **UNSAFE STATE** — No safe sequence exists! Deadlock is possible.")
+        st.warning("⚠️ The OS should deny this resource request to avoid potential deadlock.")
+
+    info_card("Key Concepts",
+              "• **Safe state** = there exists at least one sequence in which all processes finish\n"
+              "• **Unsafe ≠ Deadlock** — unsafe means deadlock is *possible*, not guaranteed\n"
+              "• **Need = Max − Allocation** — how much more each process might request\n"
+              "• **Work** starts as Available and grows as processes release resources", "teal")
+
+# ═════════════════════════════════════════════════════════════════════════════
+# ██  CONTIGUOUS MEMORY ALLOCATION SIMULATOR
+# ═════════════════════════════════════════════════════════════════════════════
+
+def first_fit(blocks, processes):
+    """First Fit: allocate to first block large enough."""
+    alloc = [-1] * len(processes)
+    block_state = list(blocks)
+    steps = []
+    for i, ps in enumerate(processes):
+        chosen = -1
+        for j, bs in enumerate(block_state):
+            if bs >= ps:
+                chosen = j
+                break
+        if chosen != -1:
+            alloc[i] = chosen
+            block_state[chosen] -= ps
+        steps.append({
+            "process": f"P{i+1}", "size": ps, "block": chosen,
+            "block_state": list(block_state),
+            "explanation": (f"P{i+1} ({ps}KB): Scans blocks left→right. "
+                           f"{'Block ' + str(chosen+1) + f' ({blocks[chosen]}KB) is first fit. Remaining: {block_state[chosen]+ps}→{block_state[chosen]}KB' if chosen != -1 else 'No block large enough! NOT ALLOCATED.'}")
+        })
+    return alloc, steps
+
+def best_fit(blocks, processes):
+    """Best Fit: allocate to smallest block large enough."""
+    alloc = [-1] * len(processes)
+    block_state = list(blocks)
+    steps = []
+    for i, ps in enumerate(processes):
+        chosen = -1
+        min_diff = float('inf')
+        for j, bs in enumerate(block_state):
+            if bs >= ps and (bs - ps) < min_diff:
+                min_diff = bs - ps
+                chosen = j
+        if chosen != -1:
+            alloc[i] = chosen
+            block_state[chosen] -= ps
+        steps.append({
+            "process": f"P{i+1}", "size": ps, "block": chosen,
+            "block_state": list(block_state),
+            "explanation": (f"P{i+1} ({ps}KB): Scans ALL blocks for tightest fit. "
+                           f"{'Block ' + str(chosen+1) + f' ({blocks[chosen]}KB) is best fit (waste={blocks[chosen]-ps}KB). Remaining: {block_state[chosen]+ps}→{block_state[chosen]}KB' if chosen != -1 else 'No block large enough! NOT ALLOCATED.'}")
+        })
+    return alloc, steps
+
+def worst_fit(blocks, processes):
+    """Worst Fit: allocate to largest block."""
+    alloc = [-1] * len(processes)
+    block_state = list(blocks)
+    steps = []
+    for i, ps in enumerate(processes):
+        chosen = -1
+        max_size = -1
+        for j, bs in enumerate(block_state):
+            if bs >= ps and bs > max_size:
+                max_size = bs
+                chosen = j
+        if chosen != -1:
+            alloc[i] = chosen
+            block_state[chosen] -= ps
+        steps.append({
+            "process": f"P{i+1}", "size": ps, "block": chosen,
+            "block_state": list(block_state),
+            "explanation": (f"P{i+1} ({ps}KB): Picks the LARGEST block. "
+                           f"{'Block ' + str(chosen+1) + f' ({blocks[chosen]}KB) is worst fit (max remaining). Remaining: {block_state[chosen]+ps}→{block_state[chosen]}KB' if chosen != -1 else 'No block large enough! NOT ALLOCATED.'}")
+        })
+    return alloc, steps
+
+def next_fit(blocks, processes):
+    """Next Fit: allocate to first block large enough, starting from last allocated block."""
+    alloc = [-1] * len(processes)
+    block_state = list(blocks)
+    steps = []
+    last_block = 0
+    n_blocks = len(blocks)
+    for i, ps in enumerate(processes):
+        chosen = -1
+        for count in range(n_blocks):
+            j = (last_block + count) % n_blocks
+            if block_state[j] >= ps:
+                chosen = j
+                last_block = j
+                break
+        if chosen != -1:
+            alloc[i] = chosen
+            block_state[chosen] -= ps
+        steps.append({
+            "process": f"P{i+1}", "size": ps, "block": chosen,
+            "block_state": list(block_state),
+            "explanation": (f"P{i+1} ({ps}KB): Scans from last allocation point. "
+                           f"{'Block ' + str(chosen+1) + f' ({blocks[chosen]}KB) is next fit. Remaining: {block_state[chosen]+ps}→{block_state[chosen]}KB' if chosen != -1 else 'No block large enough! NOT ALLOCATED.'}")
+        })
+    return alloc, steps
+
+def page_contiguous():
+    section_header("📦", "Contiguous Memory Allocation",
+                   "Simulate First Fit, Best Fit & Worst Fit")
+
+    info_card("What is Contiguous Memory Allocation?",
+              "The OS allocates a single contiguous block of memory for each process. "
+              "The algorithm determines WHICH block to choose when multiple blocks are available.", "accent")
+
+    st.markdown('<div class="section-title">📥 Input</div>', unsafe_allow_html=True)
+
+    c1, c2 = st.columns(2)
+    if c1.button("📘 Classic Example"):
+        st.session_state["mem_blocks"] = "100 500 200 300 600"
+        st.session_state["mem_procs"]  = "212 417 112 426"
+    if c2.button("📙 Fragmentation Demo"):
+        st.session_state["mem_blocks"] = "400 200 600 350 250"
+        st.session_state["mem_procs"]  = "195 350 210 400 180"
+
+    blocks_raw = st.text_input("Memory Blocks (space-separated sizes in KB)",
+                                value=st.session_state.get("mem_blocks", "100 500 200 300 600"))
+    procs_raw  = st.text_input("Process Sizes (space-separated sizes in KB)",
+                                value=st.session_state.get("mem_procs", "212 417 112 426"))
+
+    try:
+        blocks = [int(x) for x in blocks_raw.strip().split()]
+        proc_sizes = [int(x) for x in procs_raw.strip().split()]
+        if not blocks or not proc_sizes:
+            raise ValueError()
+    except (ValueError, AttributeError):
+        st.error("Invalid input — enter space-separated integers.")
+        return
+
+    algorithms_mem = st.multiselect("Algorithms", ["First Fit", "Next Fit", "Best Fit", "Worst Fit"],
+                                     default=["First Fit", "Next Fit", "Best Fit", "Worst Fit"],
+                                     key="contiguous_algos")
+    if not algorithms_mem:
+        st.warning("⚠️ Please select at least one algorithm.")
+        return
+
+    step_mode = st.toggle("🔍 Step-by-step Mode", value=False, key="cont_step_mode")
+
+    # Show input
+    st.markdown("---")
+    col_b, col_p = st.columns(2)
+    with col_b:
+        st.markdown(f'<b style="color:{ACCENT}">Memory Blocks</b>', unsafe_allow_html=True)
+        df_blocks = pd.DataFrame({"Block": [f"B{i+1}" for i in range(len(blocks))], "Size (KB)": blocks})
+        st.dataframe(df_blocks, use_container_width=True, hide_index=True)
+    with col_p:
+        st.markdown(f'<b style="color:{ACCENT2}">Processes</b>', unsafe_allow_html=True)
+        df_procs = pd.DataFrame({"Process": [f"P{i+1}" for i in range(len(proc_sizes))], "Size (KB)": proc_sizes})
+        st.dataframe(df_procs, use_container_width=True, hide_index=True)
+
+    st.markdown("---")
+
+    algo_funcs = {"First Fit": first_fit, "Next Fit": next_fit, "Best Fit": best_fit, "Worst Fit": worst_fit}
+    algo_colors = {"First Fit": ACCENT, "Next Fit": PURPLE, "Best Fit": SUCCESS, "Worst Fit": WARNING}
+    proc_colors = [ACCENT, ACCENT2, SUCCESS, WARNING, DANGER, PURPLE, TEAL, "#ff79c6"]
+
+    for algo_name in algorithms_mem:
+        color = algo_colors.get(algo_name, ACCENT)
+        st.markdown(f'<div class="section-title" style="color:{color}">{algo_name}</div>', unsafe_allow_html=True)
+        alloc, steps_list = algo_funcs[algo_name](blocks, proc_sizes)
+
+        if step_mode:
+            step_idx = st.slider("Allocation Step", 0, len(steps_list) - 1, 0, key=f"cont_step_{algo_name}")
+            current = steps_list[step_idx]
+            result_color = SUCCESS if current["block"] != -1 else DANGER
+            st.markdown(
+                f'<div class="os-card" style="border-left:4px solid {result_color}">'
+                f'<b style="color:{result_color}">Step {step_idx+1}/{len(steps_list)}</b> — '
+                f'{current["process"]} ({current["size"]}KB)<br>'
+                f'<span style="color:#b0b8cc">{current["explanation"]}</span></div>',
+                unsafe_allow_html=True,
+            )
+            # Draw memory blocks up to current step
+            block_state = current["block_state"]
+        else:
+            block_state = steps_list[-1]["block_state"] if steps_list else list(blocks)
+
+        # Allocation result table
+        result_rows = []
+        display_steps = steps_list[:step_idx+1] if step_mode else steps_list
+        for s in display_steps:
+            result_rows.append({
+                "Process": s["process"],
+                "Size (KB)": s["size"],
+                "Allocated To": f"Block {s['block']+1}" if s["block"] != -1 else "❌ Not Allocated",
+                "Status": "✅" if s["block"] != -1 else "❌",
+            })
+        st.dataframe(pd.DataFrame(result_rows), use_container_width=True, hide_index=True)
+
+        # Visual memory blocks
+        fig, ax = styled_fig(12, 2)
+        x_pos = 0
+        for j, orig_size in enumerate(blocks):
+            remaining = block_state[j]
+            used = orig_size - remaining
+            # Draw used portion
+            if used > 0:
+                # Find which process(es) are in this block
+                procs_in_block = [s["process"] for s in display_steps if s["block"] == j]
+                pcolor = proc_colors[j % len(proc_colors)]
+                ax.barh(0, used, left=x_pos, height=0.6, color=pcolor, edgecolor=PLOT_EDGE)
+                label = ",".join(procs_in_block) if procs_in_block else ""
+                ax.text(x_pos + used/2, 0, f"{label}\n{used}KB", ha='center', va='center',
+                        color='white', fontsize=7, fontfamily='monospace')
+            # Draw free portion
+            if remaining > 0:
+                ax.barh(0, remaining, left=x_pos + used, height=0.6, color=BORDER_COLOR, edgecolor=PLOT_EDGE)
+                ax.text(x_pos + used + remaining/2, 0, f"Free\n{remaining}KB", ha='center', va='center',
+                        color='#6b7394', fontsize=7, fontfamily='monospace')
+            # Block label
+            ax.text(x_pos + orig_size/2, -0.5, f"B{j+1} ({orig_size}KB)", ha='center', va='center',
+                    color=TEXT_LIGHT, fontsize=7, fontfamily='monospace')
+            x_pos += orig_size
+
+        ax.set_xlim(0, sum(blocks))
+        ax.set_ylim(-1, 1)
+        ax.set_yticks([])
+        ax.set_title(f"{algo_name} — Memory Layout", color=TEXT_LIGHT, fontfamily='monospace')
+        close_show(fig)
+
+        # Fragmentation metrics
+        total_free = sum(block_state)
+        total_mem = sum(blocks)
+        allocated = sum(s["size"] for s in display_steps if s["block"] != -1)
+        not_alloc = sum(s["size"] for s in display_steps if s["block"] == -1)
+        ext_frag = total_free
+        col_m1, col_m2, col_m3 = st.columns(3)
+        col_m1.metric("Allocated", f"{allocated} KB")
+        col_m2.metric("External Fragmentation", f"{ext_frag} KB")
+        col_m3.metric("Not Allocated", f"{not_alloc} KB")
+
+        st.markdown("---")
+
+    # Comparison
+    if len(algorithms_mem) > 1:
+        section_header("📊", "Allocation Comparison")
+        comp_data = {}
+        for algo_name in algorithms_mem:
+            alloc, steps_list = algo_funcs[algo_name](blocks, proc_sizes)
+            allocated = sum(1 for a in alloc if a != -1)
+            frag = sum(steps_list[-1]["block_state"])
+            comp_data[algo_name] = {"Allocated": allocated, "Not Allocated": len(proc_sizes) - allocated,
+                                     "Ext Fragmentation": frag}
+
+        df_comp = pd.DataFrame(comp_data).T
+        st.dataframe(df_comp, use_container_width=True)
+
+        # ── Visual Graph Using Your Custom Matplotlib Theme ─────────────
+        fig_cmp, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3.5))
+        for ax in (ax1, ax2):
+            ax.set_facecolor(BG_CARD)
+            ax.spines[:].set_color(BORDER_COLOR)
+            ax.tick_params(colors=TEXT_LIGHT)
+        fig_cmp.patch.set_facecolor(BG_DARK)
+
+        bar_colors = [ACCENT, ACCENT2, DANGER, PURPLE, SUCCESS]
+        names = list(comp_data.keys())
+        
+        # Extract the values for the charts
+        vals_allocated = [d["Allocated"] for d in comp_data.values()]
+        vals_frag = [d["Ext Fragmentation"] for d in comp_data.values()]
+
+        # Left Chart: Processes Allocated
+        ax1.bar(names, vals_allocated, color=bar_colors[:len(names)], edgecolor=PLOT_EDGE, width=0.5)
+        ax1.set_title("Processes Allocated", color=TEXT_LIGHT, fontfamily='monospace')
+        ax1.set_ylabel("Count", color=TEXT_LIGHT)
+        for i, v in enumerate(vals_allocated):
+            ax1.text(i, v + 0.1, str(v), ha='center', color=TEXT_LIGHT, fontsize=10)
+        ax1.tick_params(axis='x', rotation=20)
+
+        # Right Chart: External Fragmentation
+        ax2.bar(names, vals_frag, color=bar_colors[:len(names)], edgecolor=PLOT_EDGE, width=0.5)
+        ax2.set_title("External Fragmentation", color=TEXT_LIGHT, fontfamily='monospace')
+        ax2.set_ylabel("Memory (KB)", color=TEXT_LIGHT)
+        for i, v in enumerate(vals_frag):
+            # Using max() trick so the text doesn't clip if the fragmentation is a high number
+            offset = max(vals_frag) * 0.02 if max(vals_frag) > 0 else 0.1
+            ax2.text(i, v + offset, str(v), ha='center', color=TEXT_LIGHT, fontsize=10)
+        ax2.tick_params(axis='x', rotation=20)
+
+        plt.tight_layout()
+        close_show(fig_cmp)
+        # ───────────────────────────────────────────────────────────────
+
+        best_algo = max(comp_data, key=lambda k: comp_data[k]["Allocated"])
+        st.success(f"🏆 **{best_algo}** allocated the most processes!")
+
+        info_card("When to Use Each",
+                  "• **First Fit**: Fast — takes the first block that fits. Good general performance.\n"
+                  "• **Next Fit**: Similar to First Fit, but resumes searching from the previous allocation. Fast, but can rapidly fragment the end of memory.\n"
+                  "• **Best Fit**: Minimizes wasted space per allocation, but creates many tiny unusable fragments.\n"
+                  "• **Worst Fit**: Leaves largest remainders, hoping they'll be useful later. Often worst in practice.", "teal")
+                  
 # ═════════════════════════════════════════════════════════════════════════════
 # ██  SYSTEM MONITOR
 # ═════════════════════════════════════════════════════════════════════════════
@@ -2424,7 +3189,7 @@ def page_monitor():
     fig_cpu, ax_cpu = styled_fig(10, 2.5)
     colors_cpu = [SUCCESS if p < 50 else WARNING if p < 80 else DANGER for p in per_core]
     bars = ax_cpu.bar([f"C{i}" for i in range(len(per_core))], per_core,
-                      color=colors_cpu, edgecolor="#0f1319")
+                      color=colors_cpu, edgecolor=PLOT_EDGE)
     for bar, val in zip(bars, per_core):
         ax_cpu.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.5, f"{val}%",
                     ha='center', va='bottom', color=TEXT_LIGHT, fontsize=8)
@@ -2451,8 +3216,8 @@ def page_monitor():
     fig_mem, ax_mem = styled_fig(8, 1.8)
     used_pct = mem.percent
     color_mem = SUCCESS if used_pct < 60 else WARNING if used_pct < 85 else DANGER
-    ax_mem.barh(0, used_pct, color=color_mem, height=0.5, edgecolor="#0f1319")
-    ax_mem.barh(0, 100-used_pct, left=used_pct, color="#2a3044", height=0.5)
+    ax_mem.barh(0, used_pct, color=color_mem, height=0.5, edgecolor=PLOT_EDGE)
+    ax_mem.barh(0, 100-used_pct, left=used_pct, color=BORDER_COLOR, height=0.5)
     ax_mem.text(used_pct/2, 0, f"Used {used_pct}%", ha='center', va='center',
                 color='white', fontsize=11, fontfamily='monospace')
     ax_mem.set_xlim(0, 100); ax_mem.set_yticks([])
@@ -2535,30 +3300,32 @@ def page_home():
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Module cards — row 1
-    r1 = st.columns(3)
+    r1 = st.columns(4)
     cards1 = [
-        ("📚", "Learn Mode",       "Full OS syllabus with 30+ slides covering theory, analogies, and formulas.", ACCENT,  "Section 1 + 2"),
-        ("⚙️", "CPU Scheduling",  "FCFS · SJF · Round Robin — Gantt charts, WT/TAT tables, algorithm comparison.",  WARNING, "3 Algorithms"),
-        ("🧠", "Memory Mgmt",     "FIFO · LRU · Optimal page replacement — step-by-step visualization.",           SUCCESS, "3 Algorithms"),
+        ("📚", "Learn Mode",       "Full OS syllabus covering theory and formulas.", ACCENT,  "Section 1+2"),
+        ("⚙️", "CPU Scheduling",  "Gantt charts, WT/TAT tables (FCFS, SJF, RR, Priority, SRTF).",  WARNING, "5 Algorithms"),
+        ("🏦", "Banker's Algorithm", "Check if a state is safe to avoid deadlock.", SUCCESS, "Avoidance"),
+        ("📦", "Contiguous Alloc.", "First Fit, Best Fit, Worst Fit memory block allocation.", PURPLE, "3 Algorithms"),
     ]
     for col, (icon, title, desc, color, badge) in zip(r1, cards1):
         col.markdown(f"""
-        <div class="os-card" style="border-top:3px solid {color};text-align:center;min-height:170px">
+        <div class="os-card" style="border-top:3px solid {color};text-align:center;min-height:190px">
             <div style="font-size:2.2rem">{icon}</div>
             <div style="font-family:Space Mono,monospace;font-size:0.95rem;color:{color};margin:8px 0">{title}</div>
             <div style="font-size:12px;color:#8892a4;margin-bottom:8px">{desc}</div>
             <span class="tag">{badge}</span>
         </div>""", unsafe_allow_html=True)
 
-    r2 = st.columns(3)
+    r2 = st.columns(4)
     cards2 = [
-        ("💿", "Disk Scheduling", "FCFS · SSTF · SCAN · C-SCAN · LOOK · C-LOOK — head movement graphs.",    DANGER,  "6 Algorithms"),
+        ("🧠", "Page Replacement",     "FIFO, LRU, Optimal algorithms — step-by-step visualization.",           SUCCESS, "3 Algorithms"),
+        ("💿", "Disk Scheduling", "FCFS, SSTF, SCAN, LOOK — head movement graphs.",    DANGER,  "6 Algorithms"),
         ("📊", "System Monitor",  "Live CPU, memory, process, and disk stats from your real system.",       TEAL,    "Real-time"),
-        ("📋", "Full Syllabus",   "All OS topics with analogies, teacher notes, and common mistakes always visible.", PURPLE, "Always On"),
+        ("📋", "Full Syllabus",   "All OS topics with teacher notes and common mistakes.", PURPLE, "Always On"),
     ]
     for col, (icon, title, desc, color, badge) in zip(r2, cards2):
         col.markdown(f"""
-        <div class="os-card" style="border-top:3px solid {color};text-align:center;min-height:170px">
+        <div class="os-card" style="border-top:3px solid {color};text-align:center;min-height:190px">
             <div style="font-size:2.2rem">{icon}</div>
             <div style="font-family:Space Mono,monospace;font-size:0.95rem;color:{color};margin:8px 0">{title}</div>
             <div style="font-size:12px;color:#8892a4;margin-bottom:8px">{desc}</div>
@@ -2597,6 +3364,10 @@ elif module == "📚 Learn Mode":
     page_learn()
 elif module == "⚙️ CPU Scheduling":
     page_cpu()
+elif module == "🏦 Banker's Algorithm":
+    page_bankers()
+elif module == "📦 Contiguous Memory":
+    page_contiguous()
 elif module == "🧠 Memory Management":
     page_memory()
 elif module == "💿 Disk Scheduling":
