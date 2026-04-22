@@ -3296,7 +3296,13 @@ def page_monitor():
 
 def page_home():
     st.markdown(f'<div style="font-family:Space Mono,monospace;font-size:2.8rem;font-weight:700;background:linear-gradient(135deg,{ACCENT},{ACCENT2});-webkit-background-clip:text;-webkit-text-fill-color:transparent">Operating Systems<br>Teaching Platform</div>', unsafe_allow_html=True)
-    st.markdown(f'<p style="color:#8892a4;font-size:1.05rem;margin-top:8px">A complete interactive classroom tool · Full OS Syllabus · Simulations · Diagrams</p>', unsafe_allow_html=True)
+    st.markdown(f'<p style="color:#8892a4;font-size:1.05rem;margin-top:8px">A complete interactive classroom tool · OS Syllabus · Simulations · Diagrams</p>', unsafe_allow_html=True)
+    st.markdown("""
+<div style="margin-top:10px; font-size:0.95rem; color:gray;">
+<strong>Developed by:</strong> Sammyag Solanki, Ubaid Tukdi, Varad Bhoir<br>
+<strong>Guided by:</strong> Dr. Shailesh Kulkarni
+</div>
+""", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Module cards — row 1
