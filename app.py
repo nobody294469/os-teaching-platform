@@ -1,7 +1,7 @@
 """
 OS Teaching & Learning Platform — v2.0
 ========================================
-Upgraded complete platform covering the full OS syllabus.
+Upgraded complete platform covering the OS syllabus.
 Run with: streamlit run app.py
 
 Dependencies:
